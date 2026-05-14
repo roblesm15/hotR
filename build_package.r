@@ -21,3 +21,34 @@ usethis::use_description(fields = list(
 usethis::use_mit_license()
 
 usethis::use_readme_rmd()
+
+# ── Inside your package project (hotR/) ───────────────────────────────────────
+# Run this ONCE to create the .rda file
+
+library(usethis)  # install if needed
+
+# Assume you already have your cleaned df from the NASA POWER call
+# (your San Juan max temp data frame)
+
+puerto_rico_counts_tmax <- pr_counts 
+
+# ── Save to data/ folder ──────────────────────────────────────────────────────
+usethis::use_data(
+  puerto_rico_counts_tmax,       # object name = what users will call with data()
+  overwrite  = TRUE,  # overwrite if rebuilding
+  compress   = "xz"   # best compression for CRAN; "gzip" also fine
+)
+
+# ✅ Creates:  hotR/data/puerto_rico_counts_tmax.rda
+
+
+usethis::use_package("dplyr")
+usethis::use_package("ggplot2")
+usethis::use_package("MASS")
+
+# ── Run these in order after editing the files ────────────────────────────────
+
+devtools::document()    # generate NAMESPACE + man/*.Rd from roxygen2 tags
+devtools::check()       # R CMD CHECK — look for NOTEs / WARNINGs
+
+

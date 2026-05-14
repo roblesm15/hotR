@@ -10,80 +10,44 @@ fit_flexible(
   ktemp = NULL,
   lag = 7,
   at = NULL,
-  return_data_mat = FALSE,
-  sim_boot = TRUE
+  return_data_mat = TRUE,
+  sim_boot = TRUE,
+  n_boot = 1000
 )
 }
 \arguments{
-\item{city_data}{Data frame with columns:
-\describe{
-\item{date}{Date vector ordered chronologically with no gaps.}
-\item{temperature}{Numeric. Daily mean or maximum temperature
-in degrees C.}
-\item{deaths}{Non-negative integer. Daily all-cause or
-cause-specific mortality counts.}
-\item{population}{Positive numeric. Population at risk, used
-as a multiplicative offset on the log scale.}
-}}
+\item{city_data}{Data frame with columns \code{date},
+\code{temperature}, \code{deaths}, and \code{population}.}
 
 \item{df_per_year_spline}{Positive numeric scalar. Degrees of
 freedom per year for the natural spline baseline. Default is
 \code{3}.}
 
 \item{ktemp}{Optional numeric vector. Interior knot positions for
-the natural spline in the temperature direction of the
-cross-basis. If \code{NULL} (default), four knots are placed at
-the 20th, 40th, 60th, and 80th percentiles of the observed
-temperature distribution.}
+the natural spline in the temperature direction of the cross-basis.
+If \code{NULL}, knots are placed at the 20th, 40th, 60th, and
+80th percentiles of observed temperature.}
 
-\item{lag}{Non-negative integer. Maximum lag in days included in
-the cross-basis. Default is \code{7}.}
+\item{lag}{Non-negative integer. Maximum lag in days. Default is
+\code{7}.}
 
 \item{at}{Optional numeric vector. Temperature values at which the
-exposure-response curve is evaluated. If \code{NULL} (default),
-all unique observed temperatures are used.}
+exposure-response curve is evaluated. If \code{NULL}, all unique
+observed finite temperatures are used.}
 
-\item{return_data_mat}{Logical. If \code{TRUE}, the cross-basis
-object, design matrix, and detailed exposure-response curves are
-included in the returned list. Default is \code{FALSE}.}
+\item{return_data_mat}{Logical. If \code{TRUE}, returns the
+cross-basis object, design matrix, and detailed response curves.}
 
-\item{sim_boot}{Logical. If \code{TRUE}, uncertainty in the MMT is
-quantified by simulation from the coefficient distribution,
-yielding a 95\\% confidence interval. Default is \code{TRUE}.}
+\item{sim_boot}{Logical. If \code{TRUE}, simulates uncertainty in
+the MMT. Default is \code{TRUE}.}
+
+\item{n_boot}{Integer. Number of simulations for MMT confidence interval.}
 }
 \value{
-An object of class \code{"flexible_fit"}: a named list
-with components:
-\describe{
-\item{df_loc}{Integer. Degrees of freedom used for the spline
-baseline.}
-\item{lag}{Integer. Maximum lag used in the cross-basis.}
-\item{mmt}{Numeric scalar. Point estimate of the MMT in degrees
-C.}
-\item{ci}{Named numeric vector of length 2. 95\\% simulation-based
-confidence interval for the MMT (\code{c(lower, upper)}).
-\code{NA} if \code{sim_boot = FALSE}.}
-\item{coef}{Named numeric vector of all model coefficients.}
-\item{r}{Numeric scalar. Estimated negative binomial dispersion
-parameter.}
-\item{cb_temp}{The \code{crossbasis} object (if
-\code{return_data_mat = TRUE}, else \code{NULL}).}
-\item{X_spline}{Spline design matrix without intercept (if
-\code{return_data_mat = TRUE}, else \code{NULL}).}
-\item{exposure}{Data frame of cumulative exposure-response
-estimates with columns \code{temp}, \code{RR}, \code{low},
-\code{high} (if \code{return_data_mat = TRUE}, else
-\code{NULL}).}
-\item{lag_effects}{Data frame of lag-specific exposure-response
-estimates with columns \code{temp}, \code{lag}, \code{RR},
-\code{low}, \code{high} (if \code{return_data_mat = TRUE},
-else \code{NULL}).}
-\item{lag_importance}{Data frame summarizing lag contributions
-with columns \code{lag}, \code{importance_abs},
-\code{importance_sq}, \code{mean_abs_eta},
-\code{max_abs_eta} (if \code{return_data_mat = TRUE}, else
-\code{NULL}).}
-}
+An object of class \code{"flexible_fit"}, a named list with
+components \code{df_loc}, \code{lag}, \code{mmt}, \code{ci},
+\code{coef}, \code{r}, \code{cb_temp}, \code{X_spline},
+\code{exposure}, \code{lag_effects}, and \code{lag_importance}.
 }
 \description{
 Estimates the full temperature-mortality exposure-response
@@ -93,65 +57,34 @@ minimum mortality temperature (MMT), along with a summary of lag
 importance across the temperature distribution.
 }
 \details{
-\subsection{Model}{
-
 Mortality counts \eqn{y_t} are modeled as:
-\deqn{y_t \sim \mathrm{NegBin}(\mu_t,\, r)}
-\deqn{\log\mu_t = \mathbf{x}_t^\top\gamma +
-  f(T_t, l) + \log(\mathrm{pop}_t)}
+\deqn{y_t ~ NegBin(mu_t, r)}
+\deqn{log(mu_t) = x_t^T gamma + f(T_t, l) + log(pop_t)}
 
 where \eqn{f(T_t, l)} is a cross-basis function constructed by
 \code{dlnm::crossbasis} using natural splines in the temperature
-direction (with knots at the 20th, 40th, 60th, and 80th
-percentiles of temperature by default) and integer lag weights
-up to \code{lag} days. The baseline \eqn{\mathbf{x}_t^\top\gamma}
-captures long-term trend and seasonality via a natural spline with
-\code{df_per_year_spline} degrees of freedom per year.
-}
-
-\subsection{Minimum mortality temperature}{
+direction and integer lag weights up to \code{lag} days. By default,
+interior temperature knots are placed at the 20th, 40th, 60th, and
+80th percentiles of the observed temperature distribution.
 
 The MMT is estimated as the temperature minimizing the cumulative
-exposure-response function. A 95\\% confidence interval is obtained
-by simulation from the multivariate normal approximation to the
-distribution of the cross-basis coefficients when
+exposure-response function. A 95 percent confidence interval is
+obtained by simulation from the multivariate normal approximation
+to the distribution of the cross-basis coefficients when
 \code{sim_boot = TRUE}.
-}
-
-\subsection{Lag importance}{
-
-A data frame summarizing the contribution of each lag to the
-overall exposure-response is returned as \code{lag_importance}
-when \code{return_data_mat = TRUE}. Four summaries are provided:
-integrated absolute log-RR, integrated squared log-RR, mean
-absolute log-RR, and maximum absolute log-RR across the temperature
-distribution.
-}
-
-\subsection{Comparison with fit_hot}{
-
-\code{fit_flexible} imposes no structural assumption on the shape
-of the temperature-mortality relationship or the lag structure. It
-is well suited to longer series (five or more years) where the full
-shape of the relationship can be identified. For short or noisy
-series, \code{fit_hot} is preferred.
-}
 }
 \examples{
 \dontrun{
 data(ahmedabad)
 
 fit <- fit_flexible(
-  city_data          = ahmedabad,
+  city_data = ahmedabad,
   df_per_year_spline = 3,
-  lag                = 7,
-  return_data_mat    = TRUE
+  lag = 7,
+  return_data_mat = TRUE
 )
 
-# Minimum mortality temperature
 fit$mmt
-
-# 95\% confidence interval for the MMT
 fit$ci
 }
 }

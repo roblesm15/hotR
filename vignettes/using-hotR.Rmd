@@ -1,0 +1,141 @@
+---
+title: "Using hotR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using hotR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+This vignette demonstrates how to use `hotR` to fit temperature-mortality models using Puerto Rico mortality and temperature data. The package `hotR` provides two main functions for fitting temperature-mortality relationships: `fit_hot()` for fitting a structured threshold heat model, and `fit_flexible()` for fitting a flexible distributed lag nonlinear model (DLNM). It also includes plotting functions for visualizing fitted effects.
+
+```{r packages}
+library(hotR)
+library(MASS)
+library(splines)
+library(ggplot2)
+```
+
+## Load example data
+
+```{r data}
+pr_counts <- puerto_rico_counts_tmax
+pr_counts$city <- "Puerto Rico"
+
+head(pr_counts)
+```
+
+The data must contain at least:
+
+```{r required_columns}
+names(pr_counts)
+```
+
+Required columns for `fit_hot()` and `fit_flexible()` are:
+
+- `date`
+- `temperature`
+- `deaths`
+- `population`
+
+## Long-term trend model
+
+Before fitting temperature effects, we can fit a long-term trend model to the data to visualize residuals and check for patterns in the temperature-mortality relationship.
+
+```{r long_term_model}
+pr_counts$year <- as.integer(format(pr_counts$date, "%Y"))
+
+fit_long_term <- MASS::glm.nb(
+  deaths ~ splines::ns(as.numeric(date), df = 2 * length(unique(year))) +
+    offset(log(population)),
+  data = pr_counts
+)
+
+pr_counts$residuals_long_term <- pr_counts$deaths -
+  predict(fit_long_term, type = "response")
+```
+
+```{r residual_temperature_plot}
+ggplot(pr_counts, aes(x = temperature, y = residuals_long_term)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, span = 0.25) +
+  labs(
+    title = "Residuals from long-term trend model",
+    x = "Temperature",
+    y = "Residual deaths"
+  )
+```
+
+No clear temperature related pattern is visible in the residuals, which suggests that the long-term trend model has captured much of the temporal variation in mortality. However, there is still some variability in the residuals that may be explained by temperature effects, which we will explore with `fit_hot()` and `fit_flexible()`.
+
+## Fit the threshold heat model
+
+The function `fit_hot()` estimates a structured heat effect with a threshold temperature.
+
+```{r fit_hot_model}
+fit <- fit_hot(
+  city_data = pr_counts,
+  df_per_year_spline = 2,
+  L = 1,
+  verbose = TRUE,
+  return_data_mat = TRUE
+)
+```
+
+Estimated heat-onset risk threshold and confidence interval:
+
+```{r threshold_estimate}
+c(fit$c_hat, fit$ci_c_wald)
+```
+
+Estimated heat effect coefficient:
+
+```{r heat_effect}
+fit$coef["g"]
+```
+
+Approximate Wald confidence interval for the heat effect:
+
+```{r heat_effect_ci}
+fit$coef["g"] + c(-1, 1) * stats::qnorm(0.975) * fit$se_wald["se_beta"]
+```
+
+
+As expected, the estimated heat effect is positive but not significant-- consistent with the lack of a clear pattern in the residuals from the long-term model.
+
+## Plot fitted effects
+
+```{r effect_plot}
+hotR::effect_plot(
+  data = pr_counts,
+  model_fit = fit
+)
+```
+
+## Fit the flexible DLNM model
+
+The function `fit_flexible()` estimates a flexible distributed lag nonlinear model. This is useful as a less structured comparison to `fit_hot()`.
+
+```{r fit_flexible_model}
+fit_flexible_pr <- fit_flexible(
+  city_data = pr_counts,
+  df_per_year_spline = 2,
+  lag = 5,
+  return_data_mat = TRUE,
+  sim_boot = FALSE
+)
+```
+
+Minimum mortality temperature:
+
+```{r mmt}
+fit_flexible_pr$mmt
+```
+
+## Exposure-response plot
+
+```{r exposure_response}
+hotR::exposure_response(fit_flexible_pr)$plot
+```

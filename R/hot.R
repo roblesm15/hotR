@@ -134,7 +134,7 @@ fit_hot_internal <- function(
     eta_maxit = 10,
     eta_reltol = 1e-4,
     verbose = FALSE,
-    return_data_mat = FALSE
+    return_data_mat = TRUE
 ) {
   if (L < 0) stop("L must be at least 0.")
 

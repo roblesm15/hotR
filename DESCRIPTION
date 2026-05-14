@@ -25,6 +25,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     dlnm,
+    dplyr,
+    ggplot2,
     MASS,
     splines,
     stats
@@ -36,3 +38,7 @@ Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/yourusername/hotR
 BugReports: https://github.com/yourusername/hotR/issues
+Depends: 
+    R (>= 3.5)
+LazyData: true
+LazyDataCompression: xz 

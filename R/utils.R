@@ -128,3 +128,8 @@ nb_score_eta <- function(eta_lin, y, r) {
   mu <- exp(eta_lin)
   y - (y + r) * mu / (r + mu)
 }
+
+#' @importFrom stats dnbinom fitted glm.fit model.matrix optim optimize
+#'   plogis predict qnorm quantile rnorm
+#' @importFrom utils tail
+"_PACKAGE"

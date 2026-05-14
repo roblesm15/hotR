@@ -15,8 +15,8 @@ You can install the development version of hotR from
 [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("pak")
-#pak::pak("roblesm15/hotR")
+# install.packages("devtools")
+devtools::install_github("roblesm15/hotR")
 ```
 
 ## Example
@@ -24,7 +24,7 @@ You can install the development version of hotR from
 This is a basic example which shows you how to solve a common problem:
 
 ``` r
-#library(hotR)
+library(hotR)
 ## basic example code
 ```
 

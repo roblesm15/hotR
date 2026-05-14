@@ -1,0 +1,25 @@
+#' Daily deaths, population, and maximum temperature for Puerto Rico
+#'
+#' A dataset containing daily maximum temperature (T2M_MAX) for San Juan, Puerto Rico,
+#' along with daily death counts and population estimates for Puerto Rico. The temperature
+#' data were obtained from the NASA POWER API, with missing values (NASA fill value \code{-999}) replaced by \code{NA}. 
+#'
+#' @format A data frame with \code{nrow(puerto_rico_counts_tmax)} rows and
+#'   \code{ncol(puerto_rico_counts_tmax)} columns:
+#' \describe{
+#'   \item{date}{Date of observation, class \code{Date}.}
+#'   \item{temperature}{Maximum temperature in degrees Celsius (\eqn{°C}) for San Juan.
+#'     Missing values (NASA fill value \code{-999}) replaced with \code{NA}.}
+#'   \item{deaths}{Daily death counts for Puerto Rico.}
+#'   \item{population}{Daily population estimates for Puerto Rico.}
+#' }
+#'
+#' @source NASA POWER API \url{https://power.larc.nasa.gov/}
+#'   Community: Renewable Energy (RE). Parameter: \code{T2M_MAX}.
+#'   Location: lat \code{18.4655}, lon \code{-66.1057}.
+#'
+#' @examples
+#' data(puerto_rico_counts_tmax)
+#' head(puerto_rico_counts_tmax)
+#' summary(puerto_rico_counts_tmax$temperature)
+"puerto_rico_counts_tmax"   # ← string matching the object name — required
