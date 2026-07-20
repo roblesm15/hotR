@@ -1,53 +1,68 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.Rmd. Please edit that file. -->
 
 # hotR
 
-<!-- badges: start -->
-
-<!-- badges: end -->
-
-The goal of hotR is to …
+`hotR` estimates the heat-onset risk threshold (HOT): the temperature at
+which mortality begins to increase above its seasonal background. It
+fits a negative binomial structured threshold model with a smooth heat
+effect and a natural-spline time trend. The package also includes a
+flexible distributed lag nonlinear model (DLNM) for comparison.
 
 ## Installation
 
-You can install the development version of hotR from
-[GitHub](https://github.com/) with:
+Install the development version from GitHub:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("roblesm15/hotR")
+# install.packages("remotes")
+remotes::install_github("roblesm15/hotR")
 ```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+The workflow below is a shortened version of `test_package.R`. Input
+data must have one chronologically ordered row per day, with no date
+gaps, and columns named `date`, `temperature`, `deaths`, and
+`population`.
 
 ``` r
 library(hotR)
-## basic example code
+
+pr_counts <- puerto_rico_counts_tmax
+
+# Estimate the HOT using previous-day temperature. Retaining the model
+# matrices enables the plotting helpers.
+fit <- fit_hot(
+  city_data = pr_counts,
+  df_per_year_spline = 2,
+  L = 1,
+  return_data_mat = TRUE
+)
+
+fit$c_hat             # estimated heat-onset risk threshold (°C)
+fit$ci_c_wald         # model-based 95% confidence interval
+fit$ci_c_sandwich     # observation-level sandwich 95% interval
+fit$coef["g"]         # positive heat-effect coefficient
+
+date_effect_plot(pr_counts, fit)
+effect_plot(pr_counts, fit)
+
+# Fit a less structured DLNM comparison. Set sim_boot = TRUE to simulate
+# an uncertainty interval for the minimum mortality temperature (MMT).
+flex_fit <- fit_flexible(
+  city_data = pr_counts,
+  df_per_year_spline = 2,
+  lag = 5,
+  sim_boot = FALSE
+)
+
+flex_fit$mmt
+exposure_response(flex_fit)$plot
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+The full Puerto Rico series spans 1985–2022, so the two fits can take
+several minutes. For a quick code check, use a contiguous subset such as
+`puerto_rico_counts_tmax[1:365, ]`; estimates from such a short subset
+should not be treated as a substantive mortality analysis.
 
-``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
-```
-
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
-
-You can also embed plots, for example:
-
-<img src="man/figures/README-pressure-1.png" width="100%" />
-
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+See `vignette("using-hotR")` for a more detailed walkthrough.

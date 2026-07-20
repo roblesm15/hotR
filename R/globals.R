@@ -1,10 +1,11 @@
 # R/globals.R
 
+# Suppress R CMD check notes for variables used in non-standard evaluation.
 utils::globalVariables(c(
-  # date_effect_plot
-  "lo", "hi", "fitted",
-  # effect_plot
-  "tau_hat", "tau_lower", "tau_upper",
-  "beta_hat", "beta_lower", "beta_upper",
-  "temp_effect"
+  "date", "deaths", "fitted", "hi", "lo",
+  "temperature", "temperature_avg",
+  "population", "resid_rate",
+  "effect_rate_ref_fit", "effect_rate_ref_lower", "effect_rate_ref_upper",
+  "rr", "rr_lower", "rr_upper",
+  "x", "xlow", "xup", "lab", "xintercept", "label"
 ))

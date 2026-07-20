@@ -4,8 +4,7 @@
 #' along with daily death counts and population estimates for Puerto Rico. The temperature
 #' data were obtained from the NASA POWER API, with missing values (NASA fill value \code{-999}) replaced by \code{NA}. 
 #'
-#' @format A data frame with \code{nrow(puerto_rico_counts_tmax)} rows and
-#'   \code{ncol(puerto_rico_counts_tmax)} columns:
+#' @format A data frame with 13,879 rows and 4 columns:
 #' \describe{
 #'   \item{date}{Date of observation, class \code{Date}.}
 #'   \item{temperature}{Maximum temperature in degrees Celsius (\eqn{°C}) for San Juan.
@@ -22,4 +21,4 @@
 #' data(puerto_rico_counts_tmax)
 #' head(puerto_rico_counts_tmax)
 #' summary(puerto_rico_counts_tmax$temperature)
-"puerto_rico_counts_tmax"   # ← string matching the object name — required
+"puerto_rico_counts_tmax"

@@ -1,26 +1,48 @@
 #' Plot the estimated date (time-trend) effect
 #'
-#' Overlays fitted baseline deaths (spline date trend) with pointwise 95 \%
+#' Overlays fitted baseline deaths (spline date trend) with pointwise 95%
 #' confidence ribbons on the raw daily death counts.
-#' @param data        Data frame containing at least \code{date},
-#'                    \code{deaths}, and \code{population} columns.
-#' @param model_fit  Model fit object.  Each
-#'                    element must contain \code{$fit$X_spline},
-#'                    \code{$fit$coef}, and \code{$fit$V_wald}.
+#' @param data Data frame used to fit \code{model_fit}.
+#' @param model_fit A \code{"hot_fit"} object fitted with
+#'   \code{return_data_mat = TRUE}.
 #'
 #' @return A \code{ggplot} object.
 #' @export
-#' @importFrom dplyr filter mutate
+#' @importFrom dplyr mutate
 #' @importFrom ggplot2 ggplot aes geom_point geom_line geom_ribbon labs
-date_effect_plot <- function( data, model_fit) {
+#'
+#' @examples
+#' \dontrun{
+#' city_data <- puerto_rico_counts_tmax[1:365, ]
+#' fit <- fit_hot(city_data, L = 1, return_data_mat = TRUE)
+#' date_effect_plot(city_data, fit)
+#' }
+date_effect_plot <- function(data, model_fit) {
+  validate_city_data(data)
+  if (!inherits(model_fit, "hot_fit")) {
+    stop("model_fit must be an object returned by fit_hot().",
+         call. = FALSE)
+  }
+  if (is.null(model_fit$X_full) || is.null(model_fit$dates)) {
+    stop(
+      "Refit with return_data_mat = TRUE before calling date_effect_plot().",
+      call. = FALSE
+    )
+  }
+  if (nrow(data) != nrow(model_fit$X_full) ||
+      !identical(data$date, model_fit$dates)) {
+    stop("data must be the same ordered daily data used to fit model_fit.",
+         call. = FALSE)
+  }
 
   city_data <- data
-  n_coef    <- length(model_fit$coef)
+  p_gamma <- ncol(model_fit$X_full)
 
-  date_spline <- cbind(1, model_fit$X_spline)
-  date_effect <- date_spline %*% model_fit$coef[-n_coef] + log(city_data$population)
+  date_spline <- model_fit$X_full
+  date_effect <- date_spline %*% model_fit$coef[seq_len(p_gamma)] +
+    log(city_data$population)
 
-  vcov_sub <- model_fit$V_wald[seq_len(n_coef - 1), seq_len(n_coef - 1)]
+  vcov_sub <- model_fit$V_wald[seq_len(p_gamma), seq_len(p_gamma), drop = FALSE]
   se_date  <- sqrt(rowSums((date_spline %*% vcov_sub) * date_spline))
 
   plot_df <- dplyr::mutate(

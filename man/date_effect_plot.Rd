@@ -7,17 +7,22 @@
 date_effect_plot(data, model_fit)
 }
 \arguments{
-\item{data}{Data frame containing at least \code{date},
-\code{deaths}, and \code{population} columns.}
+\item{data}{Data frame used to fit \code{model_fit}.}
 
-\item{model_fit}{Model fit object.  Each
-element must contain \code{$fit$X_spline},
-\code{$fit$coef}, and \code{$fit$V_wald}.}
+\item{model_fit}{A \code{"hot_fit"} object fitted with
+\code{return_data_mat = TRUE}.}
 }
 \value{
 A \code{ggplot} object.
 }
 \description{
-Overlays fitted baseline deaths (spline date trend) with pointwise 95 \\%
+Overlays fitted baseline deaths (spline date trend) with pointwise 95\%
 confidence ribbons on the raw daily death counts.
+}
+\examples{
+\dontrun{
+city_data <- puerto_rico_counts_tmax[1:365, ]
+fit <- fit_hot(city_data, L = 1, return_data_mat = TRUE)
+date_effect_plot(city_data, fit)
+}
 }

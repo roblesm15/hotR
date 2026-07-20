@@ -13,19 +13,21 @@ This vignette demonstrates how to use `hotR` to fit temperature-mortality models
 
 ```{r packages}
 library(hotR)
-library(MASS)
-library(splines)
 library(ggplot2)
 ```
 
 ## Load example data
 
 ```{r data}
-pr_counts <- puerto_rico_counts_tmax
-pr_counts$city <- "Puerto Rico"
+# Use one contiguous year so the vignette builds quickly. Use the complete
+# dataset for a substantive analysis.
+pr_counts <- puerto_rico_counts_tmax[1:365, ]
 
 head(pr_counts)
 ```
+
+The included dataset spans 1985--2022. The one-year subset used here is only
+for demonstrating the package interface, not for drawing mortality conclusions.
 
 The data must contain at least:
 
@@ -68,7 +70,8 @@ ggplot(pr_counts, aes(x = temperature, y = residuals_long_term)) +
   )
 ```
 
-No clear temperature related pattern is visible in the residuals, which suggests that the long-term trend model has captured much of the temporal variation in mortality. However, there is still some variability in the residuals that may be explained by temperature effects, which we will explore with `fit_hot()` and `fit_flexible()`.
+This diagnostic offers a quick view of remaining temperature-related patterns
+after removing the smooth time trend.
 
 ## Fit the threshold heat model
 
@@ -79,7 +82,7 @@ fit <- fit_hot(
   city_data = pr_counts,
   df_per_year_spline = 2,
   L = 1,
-  verbose = TRUE,
+  verbose = FALSE,
   return_data_mat = TRUE
 )
 ```
@@ -103,7 +106,9 @@ fit$coef["g"] + c(-1, 1) * stats::qnorm(0.975) * fit$se_wald["se_beta"]
 ```
 
 
-As expected, the estimated heat effect is positive but not significant-- consistent with the lack of a clear pattern in the residuals from the long-term model.
+These estimates illustrate the returned object. Because this vignette uses
+only one year, they should not be interpreted as substantive Puerto Rico
+estimates.
 
 ## Plot fitted effects
 
@@ -122,7 +127,7 @@ The function `fit_flexible()` estimates a flexible distributed lag nonlinear mod
 fit_flexible_pr <- fit_flexible(
   city_data = pr_counts,
   df_per_year_spline = 2,
-  lag = 5,
+  lag = 2,
   return_data_mat = TRUE,
   sim_boot = FALSE
 )

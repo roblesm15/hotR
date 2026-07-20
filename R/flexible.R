@@ -78,7 +78,7 @@ findmin <- function(basis,
     model.link = "log",
     at = at,
     cumul = TRUE,
-    cen = NULL
+    cen = at[1]
   )
 
   pred <- cp$allfit
@@ -112,7 +112,7 @@ findmin <- function(basis,
       model.link = "log",
       at = at,
       cumul = TRUE,
-      cen = NULL
+      cen = at[1]
     )
 
     minsim[i] <- at[which.min(cp_i$allfit)]
@@ -151,7 +151,8 @@ findmin <- function(basis,
 #' \code{sim_boot = TRUE}.
 #'
 #' @param city_data Data frame with columns \code{date},
-#'   \code{temperature}, \code{deaths}, and \code{population}.
+#'   \code{temperature}, \code{deaths}, and \code{population}, ordered
+#'   by date with one row per day and no gaps.
 #' @param df_per_year_spline Positive numeric scalar. Degrees of
 #'   freedom per year for the natural spline baseline. Default is
 #'   \code{3}.
@@ -165,31 +166,47 @@ findmin <- function(basis,
 #'   exposure-response curve is evaluated. If \code{NULL}, all unique
 #'   observed finite temperatures are used.
 #' @param return_data_mat Logical. If \code{TRUE}, returns the
-#'   cross-basis object, design matrix, and detailed response curves.
+#'   cross-basis object and spline design matrix. Exposure-response
+#'   summaries are returned regardless of this setting. Default is
+#'   \code{TRUE}.
 #' @param sim_boot Logical. If \code{TRUE}, simulates uncertainty in
 #'   the MMT. Default is \code{TRUE}.
-#' @param n_boot Integer. Number of simulations for MMT confidence interval.
+#' @param n_boot Positive integer. Number of simulations for the MMT
+#'   confidence interval when \code{sim_boot = TRUE}. Default is
+#'   \code{1000}.
 #'
-#' @return An object of class \code{"flexible_fit"}, a named list with
-#' components \code{df_loc}, \code{lag}, \code{mmt}, \code{ci},
-#' \code{coef}, \code{r}, \code{cb_temp}, \code{X_spline},
-#' \code{exposure}, \code{lag_effects}, and \code{lag_importance}.
+#' @return An object of class \code{"flexible_fit"}, a named list with:
+#' \describe{
+#'   \item{df_loc}{Degrees of freedom used for the time spline.}
+#'   \item{lag}{Maximum temperature lag in days.}
+#'   \item{mmt}{Estimated minimum mortality temperature.}
+#'   \item{ci}{Simulation-based 95% interval for the MMT, or two
+#'     \code{NA} values when \code{sim_boot = FALSE}.}
+#'   \item{coef}{Fitted negative binomial regression coefficients.}
+#'   \item{r}{Estimated negative binomial dispersion parameter.}
+#'   \item{cb_temp, X_spline}{Cross-basis and time-spline matrices when
+#'     \code{return_data_mat = TRUE}; otherwise \code{NULL}.}
+#'   \item{exposure}{Cumulative exposure-response curve.}
+#'   \item{lag_effects}{Lag-specific exposure-response curves.}
+#'   \item{lag_importance}{Summaries of absolute and squared effects by lag.}
+#' }
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' data(ahmedabad)
+#' # Use one year here for a quick example; use the full series for analysis.
+#' city_data <- puerto_rico_counts_tmax[1:365, ]
 #'
 #' fit <- fit_flexible(
-#'   city_data = ahmedabad,
-#'   df_per_year_spline = 3,
-#'   lag = 7,
-#'   return_data_mat = TRUE
+#'   city_data = city_data,
+#'   df_per_year_spline = 2,
+#'   lag = 2,
+#'   sim_boot = FALSE
 #' )
 #'
 #' fit$mmt
-#' fit$ci
+#' exposure_response(fit)$plot
 #' }
 fit_flexible <- function(
     city_data,
@@ -201,71 +218,19 @@ fit_flexible <- function(
     sim_boot           = TRUE, 
     n_boot             = 1000
 ) {
+  validate_city_data(city_data)
+  validate_positive_scalar(df_per_year_spline, "df_per_year_spline")
+  validate_integer_scalar(lag, "lag")
+  validate_logical_scalar(return_data_mat, "return_data_mat")
+  validate_logical_scalar(sim_boot, "sim_boot")
 
-  required_cols <- c("date", "temperature", "deaths", "population")
-  missing_cols <- setdiff(required_cols, names(city_data))
-
-  if (length(missing_cols) > 0) {
-    stop(
-      "city_data is missing required columns: ",
-      paste(missing_cols, collapse = ", ")
-    )
+  if (lag >= nrow(city_data)) {
+    stop("lag must be smaller than the number of observations.",
+         call. = FALSE)
   }
-
-  if (!inherits(city_data$date, "Date")) {
-    stop("city_data$date must be of class Date.")
+  if (sim_boot) {
+    validate_integer_scalar(n_boot, "n_boot", minimum = 1L)
   }
-
-  if (anyNA(city_data[, required_cols])) {
-    stop("city_data contains missing values in required columns.")
-  }
-
-  if (!is.numeric(city_data$temperature)) {
-    stop("city_data$temperature must be numeric.")
-  }
-
-  if (!is.numeric(city_data$deaths)) {
-    stop("city_data$deaths must be numeric.")
-  }
-
-  if (any(city_data$deaths < 0)) {
-    stop("city_data$deaths must be non-negative.")
-  }
-
-  if (any(city_data$deaths != floor(city_data$deaths))) {
-    stop("city_data$deaths must contain integer counts.")
-  }
-
-  if (!is.numeric(city_data$population)) {
-    stop("city_data$population must be numeric.")
-  }
-
-  if (any(city_data$population <= 0)) {
-    stop("city_data$population must be strictly positive.")
-  }
-
-  if (!is.numeric(df_per_year_spline) ||
-      length(df_per_year_spline) != 1L ||
-      df_per_year_spline <= 0) {
-    stop("df_per_year_spline must be a positive numeric scalar.")
-  }
-
-  if (!is.numeric(lag) ||
-      length(lag) != 1L ||
-      lag < 0 ||
-      lag != floor(lag)) {
-    stop("lag must be a non-negative integer.")
-  }
-
-  if (!is.logical(return_data_mat) || length(return_data_mat) != 1L) {
-    stop("return_data_mat must be TRUE or FALSE.")
-  }
-
-  if (!is.logical(sim_boot) || length(sim_boot) != 1L) {
-    stop("sim_boot must be TRUE or FALSE.")
-  }
-
-  city_data <- city_data[order(city_data$date), , drop = FALSE]
 
   tnum <- as.numeric(city_data$date)
   temp <- city_data$temperature
@@ -274,6 +239,13 @@ fit_flexible <- function(
 
   no_years <- as.numeric(max(city_data$date) - min(city_data$date) + 1) / 365.25
   df_loc <- max(4L, round(df_per_year_spline * no_years))
+
+  if (df_loc + 2L >= nrow(city_data) - lag) {
+    stop(
+      "The requested spline and lag have too many parameters for city_data.",
+      call. = FALSE
+    )
+  }
 
   if (is.null(ktemp)) {
     ktemp <- stats::quantile(
@@ -284,8 +256,18 @@ fit_flexible <- function(
     )
   }
 
-  if (!is.numeric(ktemp) || any(!is.finite(ktemp))) {
-    stop("ktemp must be a finite numeric vector.")
+  if (!is.numeric(ktemp) || length(ktemp) == 0L ||
+      any(!is.finite(ktemp))) {
+    stop("ktemp must be a non-empty finite numeric vector.", call. = FALSE)
+  }
+  if (is.unsorted(ktemp, strictly = TRUE) || anyDuplicated(ktemp)) {
+    stop("ktemp must contain unique values in increasing order.",
+         call. = FALSE)
+  }
+  temp_range <- range(temp)
+  if (any(ktemp <= temp_range[1] | ktemp >= temp_range[2])) {
+    stop("ktemp values must lie strictly inside the temperature range.",
+         call. = FALSE)
   }
 
   cb_temp <- dlnm::crossbasis(
@@ -304,8 +286,11 @@ fit_flexible <- function(
   )
 
   if (is.null(at)) {
-  at <- sort(unique(temp[is.finite(temp)]))
+    at <- sort(unique(temp))
   } else {
+    if (!is.numeric(at)) {
+      stop("at must be NULL or a numeric vector.", call. = FALSE)
+    }
     at <- sort(unique(at[is.finite(at)]))
   }
 
@@ -405,9 +390,9 @@ fit_flexible <- function(
     r              = fit$theta,
     cb_temp        = if (return_data_mat) cb_temp else NULL,
     X_spline       = if (return_data_mat) X_spline else NULL,
-    exposure       = if (return_data_mat) cum_curve else NULL,
-    lag_effects    = if (return_data_mat) lag_curve else NULL,
-    lag_importance = if (return_data_mat) lag_importance else NULL
+    exposure       = cum_curve,
+    lag_effects    = lag_curve,
+    lag_importance = lag_importance
   )
 
   class(out) <- "flexible_fit"

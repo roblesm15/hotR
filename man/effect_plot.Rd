@@ -7,16 +7,26 @@
 effect_plot(data, model_fit, scale_pop = 1e+06)
 }
 \arguments{
-\item{data}{Data frame with city-level daily data.}
+\item{data}{Data frame used to fit \code{model_fit}.}
 
-\item{model_fit}{Threshold model fit.}
+\item{model_fit}{A \code{"hot_fit"} object fitted with
+\code{return_data_mat = TRUE}.}
 
-\item{scale_pop}{Numeric. Reference population for rate scaling
-(default 1 000 000).}
+\item{scale_pop}{Numeric. Reference population for rate scaling.
+Default is 1,000,000.}
 }
 \value{
 A \code{ggplot} object.
 }
 \description{
-Shows the fitted quadratic threshold effect, residual scatter, and key reference line for 97.5th percentile, and \eqn{\hat{\tau}}).
+Shows the fitted smooth threshold effect, residual scatter, the
+estimated heat-onset risk threshold, its Wald confidence interval,
+and the 97.5th percentile of the lagged temperature exposure.
+}
+\examples{
+\dontrun{
+city_data <- puerto_rico_counts_tmax[1:365, ]
+fit <- fit_hot(city_data, L = 1, return_data_mat = TRUE)
+effect_plot(city_data, fit)
+}
 }

@@ -137,6 +137,9 @@ grad_gamma_b_fixed_theta <- function(par, y, off, X_base, g, theta) {
 #'   \item{beta}{Numeric scalar \eqn{\hat\beta = \exp(\hat b)}.}
 #'   \item{eta_lin}{Numeric vector of fitted linear predictors.}
 #'   \item{mu}{Numeric vector of fitted means \eqn{\exp(\hat\eta)}.}
+#'   \item{convergence}{Integer convergence code returned by
+#'     \code{stats::optim}; zero indicates successful convergence.}
+#'   \item{message}{Optional optimizer diagnostic message.}
 #' }
 #'
 #' @noRd
@@ -188,7 +191,9 @@ fit_nb_coef_fixed_theta <- function(y, off, X_base, g, theta, start = NULL) {
     b     = b_hat,
     beta  = beta_hat,
     eta_lin = eta_lin,
-    mu    = mu
+    mu    = mu,
+    convergence = opt$convergence,
+    message = opt$message
   )
 }
 
@@ -368,7 +373,8 @@ grad_eta_cond_softmax <- function(eta, gamma, beta, r, c,
 #' @return A named list with components:
 #' \describe{
 #'   \item{converged}{Logical. Whether the algorithm converged within
-#'     \code{maxit} iterations.}
+#'     \code{maxit} iterations and the final coefficient optimizer
+#'     reported successful convergence.}
 #'   \item{it}{Integer. Number of iterations performed.}
 #'   \item{c}{Numeric scalar. Estimated threshold \eqn{\hat c} (the HOT).}
 #'   \item{gamma}{Numeric vector. Estimated spline coefficients
@@ -381,6 +387,8 @@ grad_eta_cond_softmax <- function(eta, gamma, beta, r, c,
 #'   \item{w}{Numeric scalar 1. Lag weight. Retained for compatibility.}
 #'   \item{z}{Numeric vector. Lagged temperature exposure used in fitting.}
 #'   \item{logLik}{Numeric scalar. Log-likelihood at convergence.}
+#'   \item{optimizer_convergence}{Integer convergence code from the
+#'     final BFGS coefficient optimization. Zero indicates success.}
 #' }
 #'
 #' @noRd
@@ -414,6 +422,13 @@ joint_nb_threshold_avg_lag_softmax <- function(
 
   c_lo_global <- as.numeric(stats::quantile(z, lower_q, na.rm = TRUE))
   c_hi_global <- as.numeric(stats::quantile(z, upper_q, na.rm = TRUE))
+  if (!is.finite(c_lo_global) || !is.finite(c_hi_global) ||
+      c_lo_global >= c_hi_global) {
+    stop(
+      "The selected temperature quantiles do not define a valid HOT search interval.",
+      call. = FALSE
+    )
+  }
   c <- min(c_hi_global, max(c_lo_global, c))
 
   g    <- smooth_hinge(z, c, k)
@@ -488,7 +503,9 @@ joint_nb_threshold_avg_lag_softmax <- function(
     }
   }
 
-  g        <- smooth_hinge(z, c, k)
+  # Polish the solution after the final dispersion update so the returned
+  # regression coefficients correspond to the returned dispersion estimate.
+  g <- smooth_hinge(z, c, k)
   fit_coef <- fit_nb_coef_fixed_theta(
     y = y, off = off, X_base = X_base,
     g = g, theta = r, start = coef_start
@@ -500,11 +517,44 @@ joint_nb_threshold_avg_lag_softmax <- function(
   eta_lin <- fit_coef$eta_lin
   mu      <- fit_coef$mu
 
-  r  <- refresh_theta_ml(y = y, mu = mu, theta_start = r)
+  r <- refresh_theta_ml(y = y, mu = mu, theta_start = r)
+
+  fit_coef <- fit_nb_coef_fixed_theta(
+    y = y, off = off, X_base = X_base,
+    g = g, theta = r, start = fit_coef$coef
+  )
+  gamma <- fit_coef$gamma
+  b <- fit_coef$b
+  beta <- fit_coef$beta
+
+  opt_c <- optimize(
+    f        = negloglik_c_cond_softmax,
+    interval = c(c_lo_global, c_hi_global),
+    gamma    = gamma,
+    b        = b,
+    r        = r,
+    X_base   = X_base,
+    z        = z,
+    off      = off,
+    y        = y,
+    k        = k
+  )
+  c <- as.numeric(opt_c$minimum)
+  g <- smooth_hinge(z, c, k)
+
+  fit_coef <- fit_nb_coef_fixed_theta(
+    y = y, off = off, X_base = X_base,
+    g = g, theta = r, start = fit_coef$coef
+  )
+  gamma <- fit_coef$gamma
+  b <- fit_coef$b
+  beta <- fit_coef$beta
+  eta_lin <- fit_coef$eta_lin
+  mu <- fit_coef$mu
   ll <- nb_loglik_full(eta_lin, y, r)
 
   list(
-    converged = converged,
+    converged = converged && fit_coef$convergence == 0L,
     it        = it,
     c         = c,
     gamma     = gamma,
@@ -514,6 +564,7 @@ joint_nb_threshold_avg_lag_softmax <- function(
     eta       = numeric(0),
     w         = 1,
     z         = z,
-    logLik    = ll
+    logLik    = ll,
+    optimizer_convergence = fit_coef$convergence
   )
 }

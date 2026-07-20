@@ -43,6 +43,16 @@
 #'
 #' @noRd
 build_temp_lag_matrix <- function(temp, L) {
+  if (!is.numeric(temp) || length(temp) == 0L ||
+      anyNA(temp) || any(!is.finite(temp))) {
+    stop("temp must be a non-empty finite numeric vector.", call. = FALSE)
+  }
+  validate_integer_scalar(L, "L")
+  if (L >= length(temp)) {
+    stop("L must be smaller than the number of observations.",
+         call. = FALSE)
+  }
+
   n   <- length(temp)
   out <- matrix(temp[1], nrow = n, ncol = L + 1)
   out[, 1] <- temp

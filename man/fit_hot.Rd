@@ -100,8 +100,10 @@ An object of class \code{"hot_fit"}: a named list with
 components:
 \describe{
 \item{c_hat}{Numeric scalar. Estimated HOT in degrees C.}
-\item{ci_c_wald}{Named numeric vector of length 2. Wald 95\\%
+\item{ci_c_wald}{Named numeric vector of length 2. Wald 95\%
 confidence interval for the HOT: \code{c(lower, upper)}.}
+\item{ci_c_sandwich}{Named numeric vector of length 2.
+Observation-level sandwich 95\% confidence interval for the HOT.}
 \item{theta_hat}{Numeric scalar. Estimated negative binomial
 dispersion parameter \eqn{\hat r}.}
 \item{coef}{Numeric vector of estimated coefficients
@@ -124,13 +126,16 @@ series or when the threshold is weakly identified.}
 \item{df_loc}{Integer. Degrees of freedom used for the spline.}
 \item{L}{Integer. Lag used.}
 \item{k}{Numeric scalar. Smoothness parameter used.}
+\item{iterations}{Integer. Number of block coordinate descent
+iterations performed.}
 \item{logLik}{Numeric scalar. Log-likelihood at convergence.}
 \item{converged}{Logical. Whether the algorithm converged within
 \code{maxit} iterations.}
-\item{X_full}{Numeric matrix. Full design matrix including intercept
-and spline columns. Always returned (used internally for vcov).}
-\item{X_spline, temp_lag_mat, ns_time_obj, y, off, z}{Retained
-if \code{return_data_mat = TRUE}, otherwise \code{NULL}.}
+\item{optimizer_convergence}{Integer convergence code from the final
+BFGS coefficient optimization; zero indicates success.}
+\item{X_full, X_spline, temp_lag_mat, ns_time_obj, y, off, z,
+dates}{Retained if \code{return_data_mat = TRUE}, otherwise
+\code{NULL}.}
 }
 }
 \description{
@@ -180,12 +185,12 @@ Two covariance estimators are returned:
 \item \strong{Wald}: based on the observed information matrix
 \eqn{-H(\hat\theta)}. Valid under correct negative binomial
 specification.
-\item \strong{Sandwich}: robust to overdispersion misspecification and
-moderate temporal dependence in mortality counts.
+\item \strong{Sandwich}: an observation-level robust covariance
+estimator for independent observations. It does not adjust for
+serial autocorrelation.
 }
-Wald confidence intervals for the HOT are provided directly as
-\code{ci_c_wald}. For short or noisy series the sandwich interval
-is recommended.
+Wald and sandwich confidence intervals for the HOT are provided as
+\code{ci_c_wald} and \code{ci_c_sandwich}.
 }
 
 \subsection{Data requirements}{
@@ -198,14 +203,14 @@ is three years.
 }
 \examples{
 \dontrun{
-# Minimal example using a single city data frame
-data(ahmedabad)  # example dataset included in hotR
+# Use one year here for a quick example; use the full series for analysis.
+city_data <- puerto_rico_counts_tmax[1:365, ]
 
 fit <- fit_hot(
-  city_data          = ahmedabad,
-  df_per_year_spline = 3,
+  city_data          = city_data,
+  df_per_year_spline = 2,
   L                  = 1,
-  verbose            = FALSE
+  return_data_mat    = TRUE
 )
 
 # Estimated heat-onset risk threshold
@@ -214,7 +219,7 @@ fit$c_hat
 # 95\% Wald confidence interval for the HOT
 fit$ci_c_wald
 
-# Standard errors (sandwich recommended for short series)
-fit$se_sandwich["se_c"]
+# Plot the fitted temperature effect
+effect_plot(city_data, fit)
 }
 }

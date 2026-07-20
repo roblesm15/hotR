@@ -17,7 +17,8 @@ fit_flexible(
 }
 \arguments{
 \item{city_data}{Data frame with columns \code{date},
-\code{temperature}, \code{deaths}, and \code{population}.}
+\code{temperature}, \code{deaths}, and \code{population}, ordered
+by date with one row per day and no gaps.}
 
 \item{df_per_year_spline}{Positive numeric scalar. Degrees of
 freedom per year for the natural spline baseline. Default is
@@ -36,18 +37,33 @@ exposure-response curve is evaluated. If \code{NULL}, all unique
 observed finite temperatures are used.}
 
 \item{return_data_mat}{Logical. If \code{TRUE}, returns the
-cross-basis object, design matrix, and detailed response curves.}
+cross-basis object and spline design matrix. Exposure-response
+summaries are returned regardless of this setting. Default is
+\code{TRUE}.}
 
 \item{sim_boot}{Logical. If \code{TRUE}, simulates uncertainty in
 the MMT. Default is \code{TRUE}.}
 
-\item{n_boot}{Integer. Number of simulations for MMT confidence interval.}
+\item{n_boot}{Positive integer. Number of simulations for the MMT
+confidence interval when \code{sim_boot = TRUE}. Default is
+\code{1000}.}
 }
 \value{
-An object of class \code{"flexible_fit"}, a named list with
-components \code{df_loc}, \code{lag}, \code{mmt}, \code{ci},
-\code{coef}, \code{r}, \code{cb_temp}, \code{X_spline},
-\code{exposure}, \code{lag_effects}, and \code{lag_importance}.
+An object of class \code{"flexible_fit"}, a named list with:
+\describe{
+\item{df_loc}{Degrees of freedom used for the time spline.}
+\item{lag}{Maximum temperature lag in days.}
+\item{mmt}{Estimated minimum mortality temperature.}
+\item{ci}{Simulation-based 95\% interval for the MMT, or two
+\code{NA} values when \code{sim_boot = FALSE}.}
+\item{coef}{Fitted negative binomial regression coefficients.}
+\item{r}{Estimated negative binomial dispersion parameter.}
+\item{cb_temp, X_spline}{Cross-basis and time-spline matrices when
+\code{return_data_mat = TRUE}; otherwise \code{NULL}.}
+\item{exposure}{Cumulative exposure-response curve.}
+\item{lag_effects}{Lag-specific exposure-response curves.}
+\item{lag_importance}{Summaries of absolute and squared effects by lag.}
+}
 }
 \description{
 Estimates the full temperature-mortality exposure-response
@@ -75,16 +91,17 @@ to the distribution of the cross-basis coefficients when
 }
 \examples{
 \dontrun{
-data(ahmedabad)
+# Use one year here for a quick example; use the full series for analysis.
+city_data <- puerto_rico_counts_tmax[1:365, ]
 
 fit <- fit_flexible(
-  city_data = ahmedabad,
-  df_per_year_spline = 3,
-  lag = 7,
-  return_data_mat = TRUE
+  city_data = city_data,
+  df_per_year_spline = 2,
+  lag = 2,
+  sim_boot = FALSE
 )
 
 fit$mmt
-fit$ci
+exposure_response(fit)$plot
 }
 }

@@ -7,10 +7,9 @@
 exposure_response(flex_model_fit)
 }
 \arguments{
-\item{flex_model_fit}{Flexible model fit object; must
-contain \code{$fit$exposure} (matrix / data frame
-with columns temperature, rr, rr_lower, rr_upper)
-and \code{$fit$mmt}.}
+\item{flex_model_fit}{A \code{"flexible_fit"} object returned by
+\code{fit_flexible()}. It must contain \code{$exposure} and
+\code{$mmt}.}
 }
 \value{
 Named list: \code{plot} (ggplot) and \code{rr_df} (data frame).
@@ -18,4 +17,11 @@ Named list: \code{plot} (ggplot) and \code{rr_df} (data frame).
 \description{
 Plots the flexible spline-estimated relative risk curve with a vertical
 line at the minimum mortality temperature (MMT).
+}
+\examples{
+\dontrun{
+city_data <- puerto_rico_counts_tmax[1:365, ]
+fit <- fit_flexible(city_data, lag = 2, sim_boot = FALSE)
+exposure_response(fit)$plot
+}
 }

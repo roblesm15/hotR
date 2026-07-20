@@ -17,8 +17,8 @@
 #   Sandwich (robust):
 #     V_sand = V_wald %*% J %*% V_wald
 #     where J = S^T S is the outer product of the score matrix.
-#     Provides robustness to overdispersion misspecification and
-#     temporal dependence in the mortality series.
+#     Provides observation-level robustness under independent sampling;
+#     it is not a heteroskedasticity-and-autocorrelation-consistent estimator.
 #
 # Standard errors for beta = exp(b) are obtained by the delta method:
 #   se(beta) = beta * se(b)
@@ -237,10 +237,10 @@ hessian_nb_threshold_lag_softmax <- function(gamma, beta, c, phi, eta,
 #' **Sandwich estimator**: The sandwich covariance is
 #' \deqn{V_\text{sand} = V_\text{wald} \cdot J \cdot V_\text{wald}}
 #' where \eqn{J = S^\top S} is the outer product of the score matrix
-#' from \code{score_matrix_nb_threshold_lag_softmax}. This estimator
-#' is consistent under mild departures from the negative binomial
-#' model, including residual overdispersion and moderate temporal
-#' dependence in the mortality counts.
+#' from \code{score_matrix_nb_threshold_lag_softmax}. This is an
+#' observation-level sandwich estimator for independent observations.
+#' Because it does not include lagged score cross-products or clusters,
+#' it does not adjust for serial autocorrelation.
 #'
 #' Both estimators are on the internal parameter scale
 #' \eqn{(\gamma, b, c, \phi)}. Standard errors for \eqn{\beta} and

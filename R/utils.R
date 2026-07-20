@@ -129,6 +129,147 @@ nb_score_eta <- function(eta_lin, y, r) {
   y - (y + r) * mu / (r + mu)
 }
 
+# -------------------------------------------------------------------
+# Shared input validation
+# -------------------------------------------------------------------
+
+#' Validate the daily mortality data used by model-fitting functions
+#'
+#' @param city_data Data frame supplied to a model-fitting function.
+#'
+#' @return The input data, invisibly.
+#'
+#' @noRd
+validate_city_data <- function(city_data) {
+  required_cols <- c("date", "temperature", "deaths", "population")
+
+  if (!is.data.frame(city_data)) {
+    stop("city_data must be a data frame.", call. = FALSE)
+  }
+
+  missing_cols <- setdiff(required_cols, names(city_data))
+  if (length(missing_cols) > 0L) {
+    stop(
+      "city_data is missing required columns: ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (nrow(city_data) < 2L) {
+    stop("city_data must contain at least two daily observations.",
+         call. = FALSE)
+  }
+
+  if (!inherits(city_data$date, "Date")) {
+    stop("city_data$date must be of class Date.", call. = FALSE)
+  }
+
+  if (anyNA(city_data[, required_cols])) {
+    stop("city_data contains missing values in required columns.",
+         call. = FALSE)
+  }
+
+  numeric_cols <- c("temperature", "deaths", "population")
+  non_numeric <- numeric_cols[!vapply(
+    city_data[numeric_cols], is.numeric, logical(1)
+  )]
+  if (length(non_numeric) > 0L) {
+    stop(
+      "city_data columns must be numeric: ",
+      paste(non_numeric, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  non_finite <- numeric_cols[vapply(
+    city_data[numeric_cols], function(x) any(!is.finite(x)), logical(1)
+  )]
+  if (length(non_finite) > 0L) {
+    stop(
+      "city_data columns must contain only finite values: ",
+      paste(non_finite, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (any(city_data$deaths < 0)) {
+    stop("city_data$deaths must be non-negative.", call. = FALSE)
+  }
+  if (any(abs(city_data$deaths - round(city_data$deaths)) >
+          sqrt(.Machine$double.eps))) {
+    stop("city_data$deaths must contain integer counts.", call. = FALSE)
+  }
+  if (any(city_data$population <= 0)) {
+    stop("city_data$population must be strictly positive.", call. = FALSE)
+  }
+  if (length(unique(city_data$temperature)) < 2L) {
+    stop("city_data$temperature must contain at least two distinct values.",
+         call. = FALSE)
+  }
+
+  date_steps <- diff(as.integer(city_data$date))
+  if (any(date_steps != 1L)) {
+    stop(
+      "city_data$date must be strictly increasing with one row per day and no gaps.",
+      call. = FALSE
+    )
+  }
+
+  invisible(city_data)
+}
+
+#' Validate a positive scalar argument
+#'
+#' @param x Value to validate.
+#' @param name Argument name used in the error message.
+#'
+#' @return The input value, invisibly.
+#'
+#' @noRd
+validate_positive_scalar <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+      !is.finite(x) || x <= 0) {
+    stop(name, " must be a positive numeric scalar.", call. = FALSE)
+  }
+  invisible(x)
+}
+
+#' Validate a scalar whole-number argument
+#'
+#' @param x Value to validate.
+#' @param name Argument name used in the error message.
+#' @param minimum Smallest permitted value.
+#'
+#' @return The input value, invisibly.
+#'
+#' @noRd
+validate_integer_scalar <- function(x, name, minimum = 0L) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+      !is.finite(x) || x < minimum || x != floor(x)) {
+    stop(
+      name, " must be an integer greater than or equal to ", minimum, ".",
+      call. = FALSE
+    )
+  }
+  invisible(x)
+}
+
+#' Validate a logical scalar argument
+#'
+#' @param x Value to validate.
+#' @param name Argument name used in the error message.
+#'
+#' @return The input value, invisibly.
+#'
+#' @noRd
+validate_logical_scalar <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop(name, " must be TRUE or FALSE.", call. = FALSE)
+  }
+  invisible(x)
+}
+
 #' @importFrom stats dnbinom fitted glm.fit model.matrix optim optimize
 #'   plogis predict qnorm quantile rnorm
 #' @importFrom utils tail

@@ -39,8 +39,8 @@
 #' @details
 #' The number of spline degrees of freedom is computed as:
 #' \deqn{df = \max\left(4,\, \text{round}(df\_per\_year \times
-#'   \text{years})\right)}
-#' where \emph{years} is the length of the series in years. The floor
+#'   \text{days} / 365.25)\right)}
+#' where \emph{days} is the inclusive duration of the series. The floor
 #' of 4 ensures a minimum of flexibility even for very short series.
 #' The spline is fit on the numeric representation of \code{date}
 #' (i.e., days since the R epoch) and stored in the returned object
@@ -82,7 +82,7 @@
 #'   diagnostics. Default is \code{FALSE}.
 #' @param return_data_mat Logical. If \code{TRUE}, the design matrix,
 #'   lag matrix, response vector, offset vector, and spline object are
-#'   retained in the returned list. If \code{FALSE} (default), these
+#'   retained in the returned list. If \code{FALSE}, these
 #'   are set to \code{NULL} to reduce memory usage.
 #'
 #' @return A named list with components:
@@ -112,7 +112,11 @@
 #'     else \code{NULL}).}
 #'   \item{k}{Numeric scalar. Smoothness parameter used.}
 #'   \item{L}{Integer. Lag used.}
+#'   \item{iterations}{Integer. Number of block coordinate descent
+#'     iterations performed.}
 #'   \item{converged}{Logical. Whether the algorithm converged.}
+#'   \item{optimizer_convergence}{Integer convergence code from the final
+#'     BFGS coefficient optimization; zero indicates success.}
 #'   \item{logLik}{Numeric scalar. Log-likelihood at convergence.}
 #' }
 #'
@@ -136,17 +140,22 @@ fit_hot_internal <- function(
     verbose = FALSE,
     return_data_mat = TRUE
 ) {
-  if (L < 0) stop("L must be at least 0.")
-
   tnum <- as.numeric(city_data$date)
   temp <- city_data$temperature
   y    <- city_data$deaths
   off  <- log(city_data$population)
 
-  no_years <- round(
-    (max(city_data$date) - min(city_data$date) + 1) / 365.25
-  )
-  df_loc <- max(4, round(df_per_year_spline * no_years))
+  no_years <- as.numeric(
+    max(city_data$date) - min(city_data$date) + 1
+  ) / 365.25
+  df_loc <- max(4L, as.integer(round(df_per_year_spline * no_years)))
+
+  if (df_loc + 2L >= nrow(city_data)) {
+    stop(
+      "The requested spline has too many degrees of freedom for city_data.",
+      call. = FALSE
+    )
+  }
 
   ns_time_obj <- splines::ns(tnum, df = df_loc)
   X_spline    <- predict(ns_time_obj, newx = tnum)
@@ -189,7 +198,9 @@ fit_hot_internal <- function(
     off             = if (return_data_mat) off           else NULL,
     k               = k,
     L               = L,
+    iterations      = fit$it,
     converged       = fit$converged,
+    optimizer_convergence = fit$optimizer_convergence,
     logLik          = fit$logLik,
     # retained internally for vcov step regardless of return_data_mat
     .y              = y,
@@ -246,12 +257,12 @@ fit_hot_internal <- function(
 #'   \item **Wald**: based on the observed information matrix
 #'     \eqn{-H(\hat\theta)}. Valid under correct negative binomial
 #'     specification.
-#'   \item **Sandwich**: robust to overdispersion misspecification and
-#'     moderate temporal dependence in mortality counts.
+#'   \item **Sandwich**: an observation-level robust covariance
+#'     estimator for independent observations. It does not adjust for
+#'     serial autocorrelation.
 #' }
-#' Wald confidence intervals for the HOT are provided directly as
-#' \code{ci_c_wald}. For short or noisy series the sandwich interval
-#' is recommended.
+#' Wald and sandwich confidence intervals for the HOT are provided as
+#' \code{ci_c_wald} and \code{ci_c_sandwich}.
 #'
 #' ## Data requirements
 #' \code{city_data} must contain one row per day with no gaps in the
@@ -323,8 +334,10 @@ fit_hot_internal <- function(
 #'   components:
 #' \describe{
 #'   \item{c_hat}{Numeric scalar. Estimated HOT in degrees C.}
-#'   \item{ci_c_wald}{Named numeric vector of length 2. Wald 95\%
+#'   \item{ci_c_wald}{Named numeric vector of length 2. Wald 95%
 #'     confidence interval for the HOT: \code{c(lower, upper)}.}
+#'   \item{ci_c_sandwich}{Named numeric vector of length 2.
+#'     Observation-level sandwich 95% confidence interval for the HOT.}
 #'   \item{theta_hat}{Numeric scalar. Estimated negative binomial
 #'     dispersion parameter \eqn{\hat r}.}
 #'   \item{coef}{Numeric vector of estimated coefficients
@@ -347,27 +360,30 @@ fit_hot_internal <- function(
 #'   \item{df_loc}{Integer. Degrees of freedom used for the spline.}
 #'   \item{L}{Integer. Lag used.}
 #'   \item{k}{Numeric scalar. Smoothness parameter used.}
+#'   \item{iterations}{Integer. Number of block coordinate descent
+#'     iterations performed.}
 #'   \item{logLik}{Numeric scalar. Log-likelihood at convergence.}
 #'   \item{converged}{Logical. Whether the algorithm converged within
 #'     \code{maxit} iterations.}
-#'   \item{X_full}{Numeric matrix. Full design matrix including intercept
-#'     and spline columns. Always returned (used internally for vcov).}
-#'   \item{X_spline, temp_lag_mat, ns_time_obj, y, off, z}{Retained
-#'     if \code{return_data_mat = TRUE}, otherwise \code{NULL}.}
+#'   \item{optimizer_convergence}{Integer convergence code from the final
+#'     BFGS coefficient optimization; zero indicates success.}
+#'   \item{X_full, X_spline, temp_lag_mat, ns_time_obj, y, off, z,
+#'     dates}{Retained if \code{return_data_mat = TRUE}, otherwise
+#'     \code{NULL}.}
 #' }
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Minimal example using a single city data frame
-#' data(ahmedabad)  # example dataset included in hotR
+#' # Use one year here for a quick example; use the full series for analysis.
+#' city_data <- puerto_rico_counts_tmax[1:365, ]
 #'
 #' fit <- fit_hot(
-#'   city_data          = ahmedabad,
-#'   df_per_year_spline = 3,
+#'   city_data          = city_data,
+#'   df_per_year_spline = 2,
 #'   L                  = 1,
-#'   verbose            = FALSE
+#'   return_data_mat    = TRUE
 #' )
 #'
 #' # Estimated heat-onset risk threshold
@@ -376,8 +392,8 @@ fit_hot_internal <- function(
 #' # 95% Wald confidence interval for the HOT
 #' fit$ci_c_wald
 #'
-#' # Standard errors (sandwich recommended for short series)
-#' fit$se_sandwich["se_c"]
+#' # Plot the fitted temperature effect
+#' effect_plot(city_data, fit)
 #' }
 fit_hot <- function(
     city_data,
@@ -397,25 +413,40 @@ fit_hot <- function(
 ) {
 
   # --- input checks ---
-  required_cols <- c("date", "temperature", "deaths", "population")
-  missing_cols  <- setdiff(required_cols, names(city_data))
-  if (length(missing_cols) > 0) {
-    stop(
-      "city_data is missing required columns: ",
-      paste(missing_cols, collapse = ", ")
-    )
+  validate_city_data(city_data)
+  validate_positive_scalar(df_per_year_spline, "df_per_year_spline")
+  validate_integer_scalar(L, "L")
+  validate_positive_scalar(k, "k")
+  validate_positive_scalar(tol, "tol")
+  validate_positive_scalar(tol_c, "tol_c")
+  validate_integer_scalar(maxit, "maxit", minimum = 1L)
+  validate_integer_scalar(
+    theta_update_every, "theta_update_every", minimum = 1L
+  )
+  validate_logical_scalar(verbose, "verbose")
+  validate_logical_scalar(return_data_mat, "return_data_mat")
+  validate_positive_scalar(eig_tol, "eig_tol")
+
+  if (L >= nrow(city_data)) {
+    stop("L must be smaller than the number of observations.",
+         call. = FALSE)
   }
-  if (!inherits(city_data$date, "Date")) {
-    stop("city_data$date must be of class Date.")
+  if (!is.numeric(lower_q) || length(lower_q) != 1L ||
+      !is.finite(lower_q) || lower_q <= 0 || lower_q >= 1) {
+    stop("lower_q must be a numeric scalar strictly between 0 and 1.",
+         call. = FALSE)
   }
-  if (any(city_data$deaths < 0, na.rm = TRUE)) {
-    stop("city_data$deaths must be non-negative.")
+  if (!is.numeric(upper_q) || length(upper_q) != 1L ||
+      !is.finite(upper_q) || upper_q <= 0 || upper_q >= 1) {
+    stop("upper_q must be a numeric scalar strictly between 0 and 1.",
+         call. = FALSE)
   }
-  if (any(city_data$population <= 0, na.rm = TRUE)) {
-    stop("city_data$population must be strictly positive.")
+  if (lower_q >= upper_q) {
+    stop("lower_q must be smaller than upper_q.", call. = FALSE)
   }
-  if (L < 0 || L != round(L)) {
-    stop("L must be a non-negative integer.")
+  if (!is.null(c0) &&
+      (!is.numeric(c0) || length(c0) != 1L || !is.finite(c0))) {
+    stop("c0 must be NULL or a finite numeric scalar.", call. = FALSE)
   }
 
   # --- fit ---
@@ -462,7 +493,8 @@ fit_hot <- function(
   )
 
   # --- assemble output ---
-  fit$X_full          <- X_full
+  fit$X_full          <- if (return_data_mat) X_full else NULL
+  fit$dates           <- if (return_data_mat) city_data$date else NULL
   fit$V_wald          <- vc$V_wald
   fit$V_sandwich      <- vc$V_sandwich
   fit$se_wald         <- se_wald
@@ -470,8 +502,12 @@ fit_hot <- function(
   fit$eigvals         <- vc$eigvals
   fit$eigvals_reg     <- vc$eigvals_reg
   fit$ci_c_wald       <- c(
-    lower = fit$c_hat - qnorm(0.975) * se_wald["se_c"],
-    upper = fit$c_hat + qnorm(0.975) * se_wald["se_c"]
+    lower = fit$c_hat - qnorm(0.975) * unname(se_wald["se_c"]),
+    upper = fit$c_hat + qnorm(0.975) * unname(se_wald["se_c"])
+  )
+  fit$ci_c_sandwich <- c(
+    lower = fit$c_hat - qnorm(0.975) * unname(se_sand["se_c"]),
+    upper = fit$c_hat + qnorm(0.975) * unname(se_sand["se_c"])
   )
 
   # remove internal slots

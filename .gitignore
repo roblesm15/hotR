@@ -1,7 +1,10 @@
 .Rproj.user
+.vscode/
 .Rhistory
 .RData
 .httr-oauth
 .DS_Store
 .quarto
 inst/doc
+*.Rcheck/
+*.tar.gz

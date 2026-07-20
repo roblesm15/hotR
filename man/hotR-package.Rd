@@ -3,25 +3,27 @@
 \docType{package}
 \name{hotR-package}
 \alias{hotR-package}
-\title{hotR: Heat-Mortality Analysis Tools}
+\title{hotR: Heat-onset risk threshold estimation}
 \description{
-Provides simulation, modelling, and visualisation utilities for
-analysing the relationship between extreme heat and mortality.
+Fits a structured threshold model to estimate the temperature at which
+mortality begins to increase above its seasonal background. The package
+also provides a flexible distributed lag nonlinear model for comparison
+and plotting helpers for both fits.
 
 Implements the structured threshold model (STM) for estimating the heat-onset risk threshold (HOT) from daily mortality time series. The HOT is the temperature above which heat-attributable mortality begins to rise. The model links daily death counts to temperature exposure via a smooth hinge function, adjusts for long-term trend and seasonality using a natural spline basis, and accounts for overdispersion via a negative binomial likelihood. Parameters are estimated by block coordinate descent. Both Wald and sandwich covariance estimators are provided for inference on the HOT. The method is designed for short and noisy mortality series where temperature exposure is concentrated in warm regions.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/yourusername/hotR}
-  \item Report bugs at \url{https://github.com/yourusername/hotR/issues}
+  \item \url{https://github.com/roblesm15/hotR}
+  \item Report bugs at \url{https://github.com/roblesm15/hotR/issues}
 }
 
 
 Useful links:
 \itemize{
-  \item \url{https://github.com/yourusername/hotR}
-  \item Report bugs at \url{https://github.com/yourusername/hotR/issues}
+  \item \url{https://github.com/roblesm15/hotR}
+  \item Report bugs at \url{https://github.com/roblesm15/hotR/issues}
 }
 
 }

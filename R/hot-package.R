@@ -1,28 +1,9 @@
-#' hotR: Heat-Mortality Analysis Tools
+#' hotR: Heat-onset risk threshold estimation
 #'
-#' Provides simulation, modelling, and visualisation utilities for
-#' analysing the relationship between extreme heat and mortality.
+#' Fits a structured threshold model to estimate the temperature at which
+#' mortality begins to increase above its seasonal background. The package
+#' also provides a flexible distributed lag nonlinear model for comparison
+#' and plotting helpers for both fits.
 #'
 #' @keywords internal
 "_PACKAGE"
-
-## Suppress R CMD CHECK notes for NSE variables used across the package
-utils::globalVariables(c(
-  # data columns
-  "date", "deaths", "temperature", "population", "city",
-  "day", "ah",
-  # computed columns
-  "rr", "rr_lower", "rr_upper", "rr_flexible",
-  "rr_flexible_lower", "rr_flexible_upper",
-  "effect_rate_ref_fit", "effect_rate_ref_lower", "effect_rate_ref_upper",
-  "effect_rate_ref_flex", "effect_rate_ref_flex_low", "effect_rate_ref_flex_up",
-  "resid_rate", "temperature_avg",
-  "weight", "se_weights", "lag",
-  "effect", "effect_lower", "effect_upper",
-  "pearson_residuals", "residuals",
-  # annotation helpers
-  "x", "xlow", "xup", "lab",
-  "xintercept", "label",
-  # lag helpers
-  "RR", "low", "high", "temp", "se_effect"
-))

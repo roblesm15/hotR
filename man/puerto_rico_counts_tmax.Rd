@@ -5,8 +5,7 @@
 \alias{puerto_rico_counts_tmax}
 \title{Daily deaths, population, and maximum temperature for Puerto Rico}
 \format{
-A data frame with \code{nrow(puerto_rico_counts_tmax)} rows and
-\code{ncol(puerto_rico_counts_tmax)} columns:
+A data frame with 13,879 rows and 4 columns:
 \describe{
 \item{date}{Date of observation, class \code{Date}.}
 \item{temperature}{Maximum temperature in degrees Celsius (\eqn{°C}) for San Juan.

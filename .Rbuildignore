@@ -1,6 +1,11 @@
 ^hotR\.Rproj$
 ^\.Rproj\.user$
+^\.vscode$
 ^LICENSE\.md$
 ^README\.Rmd$
 ^README\.html$
 ^build_package\.r$
+^prepare-pr-data\.r$
+^test_package\.R$
+^.*\.Rcheck$
+^hotR_[0-9.]+\.tar\.gz$
