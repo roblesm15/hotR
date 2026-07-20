@@ -21,19 +21,9 @@ remotes::install_github(
 )
 ```
 
-When working from a local clone, `devtools::load_all()` loads the
-package code but does not install its vignette. Install the package
-locally with:
-
-``` r
-devtools::install(build_vignettes = TRUE)
-```
-
 ## Example
 
-The workflow below is a shortened version of `test_package.R`. Input
-data must have one chronologically ordered row per day, with no date
-gaps, and columns named `date`, `temperature`, `deaths`, and
+Input data must have columns named `date`, `temperature`, `deaths`, and
 `population`.
 
 ``` r
@@ -53,7 +43,7 @@ fit <- fit_hot(
 fit$c_hat             # estimated heat-onset risk threshold (°C)
 fit$ci_c_wald         # model-based 95% confidence interval
 fit$ci_c_sandwich     # observation-level sandwich 95% interval
-fit$coef["g"]         # positive heat-effect coefficient
+fit$coef["g"]         # heat-effect coefficient
 
 date_effect_plot(pr_counts, fit)
 effect_plot(pr_counts, fit)
@@ -82,6 +72,3 @@ walkthrough with:
 ``` r
 vignette("using-hotR", package = "hotR")
 ```
-
-You can also render the source vignette directly from a local clone with
-`rmarkdown::render("vignettes/using-hotR.Rmd")`.

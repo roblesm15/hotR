@@ -19,15 +19,13 @@ library(ggplot2)
 ## Load example data
 
 ```{r data}
-# Use one contiguous year so the vignette builds quickly. Use the complete
-# dataset for a substantive analysis.
-pr_counts <- puerto_rico_counts_tmax[1:365, ]
+pr_counts <- puerto_rico_counts_tmax
 
 head(pr_counts)
 ```
 
-The included dataset spans 1985--2022. The one-year subset used here is only
-for demonstrating the package interface, not for drawing mortality conclusions.
+The included dataset spans 1985--2022. All models in this vignette use the
+complete daily series.
 
 The data must contain at least:
 
@@ -106,9 +104,8 @@ fit$coef["g"] + c(-1, 1) * stats::qnorm(0.975) * fit$se_wald["se_beta"]
 ```
 
 
-These estimates illustrate the returned object. Because this vignette uses
-only one year, they should not be interpreted as substantive Puerto Rico
-estimates.
+These estimates use the complete Puerto Rico series and illustrate the
+quantities returned by the structured threshold model.
 
 ## Plot fitted effects
 
@@ -127,7 +124,7 @@ The function `fit_flexible()` estimates a flexible distributed lag nonlinear mod
 fit_flexible_pr <- fit_flexible(
   city_data = pr_counts,
   df_per_year_spline = 2,
-  lag = 2,
+  lag = 5,
   return_data_mat = TRUE,
   sim_boot = FALSE
 )

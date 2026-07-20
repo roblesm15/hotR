@@ -357,12 +357,10 @@ remotes::install_github(
   &quot;roblesm15/hotR&quot;,
   build_vignettes = TRUE
 )</code></pre>
-<p>When working from a local clone, <code>devtools::load_all()</code> loads the package code but does not install its vignette. Install the package locally with:</p>
-<pre class="r"><code>devtools::install(build_vignettes = TRUE)</code></pre>
 </div>
 <div id="example" class="section level2">
 <h2>Example</h2>
-<p>The workflow below is a shortened version of <code>test_package.R</code>. Input data must have one chronologically ordered row per day, with no date gaps, and columns named <code>date</code>, <code>temperature</code>, <code>deaths</code>, and <code>population</code>.</p>
+<p>Input data must have columns named <code>date</code>, <code>temperature</code>, <code>deaths</code>, and <code>population</code>.</p>
 <pre class="r"><code>library(hotR)
 
 pr_counts &lt;- puerto_rico_counts_tmax
@@ -379,7 +377,7 @@ fit &lt;- fit_hot(
 fit$c_hat             # estimated heat-onset risk threshold (°C)
 fit$ci_c_wald         # model-based 95% confidence interval
 fit$ci_c_sandwich     # observation-level sandwich 95% interval
-fit$coef[&quot;g&quot;]         # positive heat-effect coefficient
+fit$coef[&quot;g&quot;]         # heat-effect coefficient
 
 date_effect_plot(pr_counts, fit)
 effect_plot(pr_counts, fit)
@@ -398,7 +396,6 @@ exposure_response(flex_fit)$plot</code></pre>
 <p>The full Puerto Rico series spans 1985–2022, so the two fits can take several minutes. For a quick code check, use a contiguous subset such as <code>puerto_rico_counts_tmax[1:365, ]</code>; estimates from such a short subset should not be treated as a substantive mortality analysis.</p>
 <p>After installing with vignette building enabled, open the detailed walkthrough with:</p>
 <pre class="r"><code>vignette(&quot;using-hotR&quot;, package = &quot;hotR&quot;)</code></pre>
-<p>You can also render the source vignette directly from a local clone with <code>rmarkdown::render(&quot;vignettes/using-hotR.Rmd&quot;)</code>.</p>
 </div>
 </div>
 
