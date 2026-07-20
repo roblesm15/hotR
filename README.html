@@ -353,7 +353,12 @@ pre code {
 <h2>Installation</h2>
 <p>Install the development version from GitHub:</p>
 <pre class="r"><code># install.packages(&quot;remotes&quot;)
-remotes::install_github(&quot;roblesm15/hotR&quot;)</code></pre>
+remotes::install_github(
+  &quot;roblesm15/hotR&quot;,
+  build_vignettes = TRUE
+)</code></pre>
+<p>When working from a local clone, <code>devtools::load_all()</code> loads the package code but does not install its vignette. Install the package locally with:</p>
+<pre class="r"><code>devtools::install(build_vignettes = TRUE)</code></pre>
 </div>
 <div id="example" class="section level2">
 <h2>Example</h2>
@@ -391,7 +396,9 @@ flex_fit &lt;- fit_flexible(
 flex_fit$mmt
 exposure_response(flex_fit)$plot</code></pre>
 <p>The full Puerto Rico series spans 1985–2022, so the two fits can take several minutes. For a quick code check, use a contiguous subset such as <code>puerto_rico_counts_tmax[1:365, ]</code>; estimates from such a short subset should not be treated as a substantive mortality analysis.</p>
-<p>See <code>vignette(&quot;using-hotR&quot;)</code> for a more detailed walkthrough.</p>
+<p>After installing with vignette building enabled, open the detailed walkthrough with:</p>
+<pre class="r"><code>vignette(&quot;using-hotR&quot;, package = &quot;hotR&quot;)</code></pre>
+<p>You can also render the source vignette directly from a local clone with <code>rmarkdown::render(&quot;vignettes/using-hotR.Rmd&quot;)</code>.</p>
 </div>
 </div>
 

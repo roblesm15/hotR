@@ -28,7 +28,17 @@ Install the development version from GitHub:
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("roblesm15/hotR")
+remotes::install_github(
+  "roblesm15/hotR",
+  build_vignettes = TRUE
+)
+```
+
+When working from a local clone, `devtools::load_all()` loads the package code
+but does not install its vignette. Install the package locally with:
+
+``` r
+devtools::install(build_vignettes = TRUE)
 ```
 
 ## Example
@@ -77,4 +87,12 @@ minutes. For a quick code check, use a contiguous subset such as
 `puerto_rico_counts_tmax[1:365, ]`; estimates from such a short subset should
 not be treated as a substantive mortality analysis.
 
-See `vignette("using-hotR")` for a more detailed walkthrough.
+After installing with vignette building enabled, open the detailed walkthrough
+with:
+
+``` r
+vignette("using-hotR", package = "hotR")
+```
+
+You can also render the source vignette directly from a local clone with
+`rmarkdown::render("vignettes/using-hotR.Rmd")`.
